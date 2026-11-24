@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WiFi SriFi</title>
+<style>
+  :root { --bg:#111418; --card:#1b2026; --line:#2b323b; --txt:#e8ecf0; --dim:#8b95a1; --acc:#ff8300; --ok:#3ddc84; --warn:#ffcc4d; --bad:#ff5a5a;
+          --b24:#ffb020; --b5:#3ea6ff; --b6:#b36bff; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:0 14px 30px; }
+  header { display:flex; align-items:center; gap:10px; padding:14px 0 8px; }
+  h1 { font-size:20px; margin:0; flex:1; }
+  h1 span { color:var(--acc); }
+  .chip { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+  nav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; gap:4px; padding:6px 0 10px; }
+  nav button { flex:1; padding:9px 2px; font-size:13px; border-radius:9px; background:transparent; border:1px solid var(--line); color:var(--dim); }
+  nav button.on { background:var(--acc); color:#111; border-color:var(--acc); font-weight:700; }
+  .tab { display:none; } .tab.on { display:block; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px; }
+  label, .lbl { display:block; color:var(--dim); font-size:13px; margin-bottom:6px; }
+  input[type=text], textarea { width:100%; background:#0c0f12; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:12px; font:18px/1.3 ui-monospace,Consolas,monospace; }
+  textarea { font-size:14px; min-height:120px; resize:vertical; }
+  input:focus, textarea:focus { outline:2px solid var(--acc); border-color:transparent; }
+  .mono { font-family:ui-monospace,Consolas,monospace; }
+  .dim { color:var(--dim); font-size:13px; }
+  .warn { color:var(--warn); } .bad { color:var(--bad); } .ok { color:var(--ok); }
+  .row { display:flex; gap:8px; margin-top:10px; }
+  button { flex:1; background:#262d35; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:10px; font-size:15px; }
+  button:active { background:#323a44; }
+  button.acc { background:var(--acc); color:#111; border-color:var(--acc); font-weight:700; }
+  .name { font:700 28px/1.15 system-ui,sans-serif; color:var(--ok); word-break:break-word; }
+  .name.unk { color:var(--dim); font-size:20px; }
+  .plus { flex:none; width:44px; height:44px; padding:0; font-size:26px; line-height:1; background:var(--acc); color:#111; border:none; vertical-align:middle; margin-left:8px; }
+  .band { display:inline-block; font:800 15px/1 system-ui,sans-serif; padding:7px 11px; border-radius:8px; color:#111; letter-spacing:.3px; }
+  .band.b24 { background:var(--b24); } .band.b5 { background:var(--b5); } .band.b6 { background:var(--b6); } .band.bx { background:#555; color:#eee; }
+  .band.sm { font-size:12px; padding:4px 7px; border-radius:6px; }
+  .bandline { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0 4px; }
+  .sig { display:flex; align-items:baseline; gap:10px; margin-top:12px; }
+  .pct { font:800 40px/1 system-ui,sans-serif; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .tile { display:flex; align-items:center; gap:10px; background:#0c0f12; border:1px solid var(--line); border-left-width:4px; border-radius:12px; padding:12px; }
+  .tile svg { width:34px; height:34px; flex:none; }
+  .tile .tv { font:800 26px/1 system-ui,sans-serif; white-space:nowrap; }
+  .tile .tv small { font-size:14px; font-weight:700; opacity:.8; margin-left:2px; }
+  .tile .tl { font-size:12px; color:var(--dim); margin-top:4px; }
+  .dbm { display:flex; align-items:center; gap:10px; margin-top:14px; }
+  .dbm svg { width:36px; height:36px; flex:none; }
+  .dbm .n { font:800 30px/1 system-ui,sans-serif; color:#4fe0d0; }
+  .dbm .n small { font-size:15px; margin-left:3px; opacity:.8; }
+  .dist { margin-top:16px; }
+  .dist .tr { display:flex; align-items:center; gap:8px; }
+  .dist .trk { flex:1; height:6px; background:#2b323b; border-radius:3px; position:relative; }
+  .dist .fil { position:absolute; left:0; top:0; height:100%; background:var(--b5); border-radius:3px; }
+  .dist .dot { position:absolute; top:-6px; width:18px; height:18px; margin-left:-9px; border-radius:50%; background:var(--b5); border:3px solid var(--card); }
+  .dist .lb { display:flex; align-items:baseline; gap:10px; margin:6px 0 0 36px; }
+  .dist .lb b { font:800 24px system-ui,sans-serif; color:var(--b5); }
+  .dist .lb span { font:700 15px system-ui,sans-serif; }
+  .bar { height:10px; background:#0c0f12; border-radius:6px; overflow:hidden; margin:8px 0 4px; }
+  .bar > i { display:block; height:100%; border-radius:6px; }
+  .bar.sm { height:6px; margin:4px 0 0; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:14px; }
+  .kv .k { color:var(--dim); } .kv .v { text-align:right; font-weight:600; }
+  .alert { border:1px solid var(--warn); background:rgba(255,204,77,.08); border-radius:10px; padding:10px 12px; margin:10px 0 0; font-size:14px; }
+  .alert.bad { border-color:var(--bad); background:rgba(255,90,90,.08); }
+  .alert button { margin-top:8px; width:100%; }
+  .ap { padding:10px 0; border-bottom:1px solid var(--line); }
+  .ap:last-child { border-bottom:none; }
+  .ap.cur { background:rgba(61,220,132,.06); margin:0 -14px; padding:10px 14px; }
+  .ap .t { display:flex; align-items:center; gap:8px; }
+  .ap .n { flex:1; font-weight:700; word-break:break-word; }
+  .ap .m { display:flex; align-items:center; gap:8px; margin:5px 0 3px; flex-wrap:wrap; }
+  .ap .m svg { width:22px; height:22px; flex:none; }
+  .ap .m .db { font:800 18px/1 system-ui,sans-serif; color:#4fe0d0; }
+  .ap .m .db small { font-size:12px; margin-left:2px; opacity:.8; }
+  .ap .m .ds { font:800 16px/1 system-ui,sans-serif; color:var(--b5); margin-left:6px; }
+  .ap .m .dl { font-size:13px; font-weight:700; }
+  .ap .p { font-weight:800; min-width:44px; text-align:right; }
+  .hist { font-size:13px; font-family:ui-monospace,Consolas,monospace; color:var(--dim); line-height:1.7; }
+  .seg { display:flex; gap:6px; }
+  .seg button.on { background:var(--acc); color:#111; border-color:var(--acc); font-weight:700; }
+  .opt { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .opt:last-child { border-bottom:none; }
+  .opt .d { flex:1; } .opt .d b { display:block; font-weight:600; } .opt .d span { color:var(--dim); font-size:13px; }
+  .sw { position:relative; width:52px; height:30px; flex:none; }
+  .sw input { opacity:0; width:0; height:0; }
+  .sw i { position:absolute; inset:0; background:#333b45; border-radius:30px; transition:.15s; }
+  .sw i:before { content:""; position:absolute; width:24px; height:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; }
+  .sw input:checked + i { background:var(--acc); }
+  .sw input:checked + i:before { transform:translateX(22px); }
+  table { width:100%; border-collapse:collapse; font-size:14px; margin-top:8px; }
+  td, th { text-align:left; padding:6px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:500; font-size:12px; }
+  tr.hit td { color:var(--ok); font-weight:700; }
+  canvas { width:100%; display:block; }
+  .chb { margin:10px 0 4px; }
+  .chr { display:grid; grid-template-columns:52px 1fr auto; align-items:center; gap:8px; font-size:13px; padding:3px 0; }
+  .chr .c { font-weight:700; }
+  .chr .bx { height:14px; background:#0c0f12; border-radius:4px; overflow:hidden; }
+  .chr .bx i { display:block; height:100%; border-radius:4px; }
+  .chr.me .c, .chr.me .v { color:var(--ok); }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; font-size:13px; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:20; display:none; align-items:flex-end; justify-content:center; }
+  .modal.on { display:flex; }
+  .sheet { background:var(--card); border-top:1px solid var(--line); border-radius:16px 16px 0 0; width:100%; max-width:560px; max-height:88vh; overflow:auto; padding:16px 14px 20px; }
+  .cand { display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-bottom:1px solid var(--line); }
+  .cand input { width:22px; height:22px; margin-top:2px; accent-color:var(--acc); }
+  .banner { position:relative; margin:22px auto 0; max-width:360px; }
+  .banner img { display:block; width:100%; height:auto; image-rendering:pixelated; }
+  .banner a { position:absolute; top:0; bottom:0; width:50%; border-radius:6px; transition:background .15s; }
+  .banner a.fb { left:0; } .banner a.gh { right:0; }
+  .banner a:hover, .banner a:active { background:rgba(255,255,255,.14); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="title"></h1>
+    <span class="chip" id="modeChip"></span>
+  </header>
+  <nav id="tabs">
+    <button data-tab="live" data-i18n="tabLive"></button>
+    <button data-tab="near" data-i18n="tabNear"></button>
+    <button data-tab="chart" data-i18n="tabChart"></button>
+    <button data-tab="list" data-i18n="tabList"></button>
+    <button data-tab="set" data-i18n="tabSet"></button>
+  </nav>
+
+  <!-- NA ŻYWO -->
+  <section class="tab" id="tab-live">
+    <div id="status"></div>
+    <div id="sticky"></div>
+    <div class="card" id="liveCard"></div>
+    <div class="card" id="speedCard"></div>
+    <div class="card">
+      <div class="lbl" data-i18n="roams"></div>
+      <div class="hist" id="hist"></div>
+    </div>
+  </section>
+
+  <!-- W POBLIŻU -->
+  <section class="tab" id="tab-near">
+    <div class="card">
+      <div class="row" style="margin-top:0"><button class="acc" id="scanBtn" data-i18n="scanNow"></button></div>
+      <div class="dim" id="scanInfo" style="margin-top:8px"></div>
+    </div>
+    <div class="card" id="nearList"></div>
+  </section>
+
+  <!-- WYKRES -->
+  <section class="tab" id="tab-chart">
+    <div class="card">
+      <div class="lbl" data-i18n="chartTitle"></div>
+      <canvas id="chart" height="260"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card">
+      <div class="lbl" data-i18n="chTitle"></div>
+      <div id="channels"></div>
+    </div>
+  </section>
+
+  <!-- LISTA -->
+  <section class="tab" id="tab-list">
+    <div class="card">
+      <label for="calcIn" data-i18n="calcLabel"></label>
+      <input type="text" id="calcIn" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="9C:8C:D8:9B:2C:83">
+      <div id="calcOut" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <label for="list" data-i18n="listLabel"></label>
+      <textarea id="list" spellcheck="false" placeholder="MikroTik sypialnia  D0:EA:11:3A:7C:1*&#10;AP-Parter-Korytarz  9C:8C:D8:A6:E4:16"></textarea>
+      <div class="row native"><button id="expTxt" data-i18n="export"></button><button id="expShare" data-i18n="share"></button></div>
+      <div class="row native"><button id="impTxt" data-i18n="import"></button></div>
+      <div class="row"><button id="clearList" data-i18n="clear"></button></div>
+      <div class="dim" id="listMsg" style="margin-top:8px"></div>
+      <div id="tbl"></div>
+    </div>
+  </section>
+
+  <!-- USTAWIENIA -->
+  <section class="tab" id="tab-set">
+    <div class="card">
+      <div class="lbl" data-i18n="mode"></div>
+      <div class="seg" id="modeSeg"><button data-v="universal" data-i18n="modeUni"></button><button data-v="aruba">Aruba</button></div>
+      <div class="dim" id="modeDesc" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="opt"><div class="d"><b data-i18n="optSound"></b><span data-i18n="optSoundD"></span></div>
+        <button id="testSound" style="flex:none;width:auto;padding:8px 12px" data-i18n="test"></button>
+        <label class="sw"><input type="checkbox" id="optSound"><i></i></label></div>
+      <div class="opt"><div class="d"><b data-i18n="optVib"></b><span data-i18n="optVibD"></span></div>
+        <label class="sw"><input type="checkbox" id="optVib"><i></i></label></div>
+      <div class="opt"><div class="d"><b data-i18n="optScreen"></b><span data-i18n="optScreenD"></span></div>
+        <label class="sw"><input type="checkbox" id="optScreen"><i></i></label></div>
+      <div class="opt native"><div class="d"><b data-i18n="optBg"></b><span data-i18n="optBgD"></span></div>
+        <label class="sw"><input type="checkbox" id="optBg"><i></i></label></div>
+      <div class="opt"><div class="d"><b data-i18n="optSticky"></b><span data-i18n="optStickyD"></span></div>
+        <label class="sw"><input type="checkbox" id="optSticky"><i></i></label></div>
+    </div>
+    <div class="card">
+      <div class="lbl" data-i18n="lang"></div>
+      <div class="seg" id="langSeg"><button data-v="pl">Polski</button><button data-v="en">English</button></div>
+    </div>
+    <div class="card dim native"><b style="color:var(--txt)" data-i18n="tileT"></b><br><span data-i18n="tileD"></span></div>
+    <div class="card dim" id="about"></div>
+  </section>
+
+  <div class="banner">
+    <img src="created.png" alt="Created by IT Guy">
+    <a class="fb" href="https://www.facebook.com/ajtiguy" aria-label="Facebook"></a>
+    <a class="gh" href="https://github.com/nyorbee" aria-label="GitHub"></a>
+  </div>
+</main>
+
+<!-- okno nazywania AP -->
+<div class="modal" id="nameModal">
+  <div class="sheet">
+    <div style="font:700 19px system-ui;margin-bottom:10px" data-i18n="nameTitle"></div>
+    <div id="nmInfo" class="dim" style="margin-bottom:10px"></div>
+    <input type="text" id="nmName" autocomplete="off" style="font-family:system-ui;font-size:18px">
+    <div id="nmCands" style="margin-top:12px"></div>
+    <div class="row"><button class="acc" id="nmSave" data-i18n="save"></button><button id="nmCancel" data-i18n="cancel"></button></div>
+  </div>
+</div>
+
+<script src="oui.js"></script>
+<script>
+'use strict';
+/* =========================================================
+   Tłumaczenia
+   ========================================================= */
+const I18N = {
+  pl: {
+    tabLive:'Na żywo', tabNear:'W pobliżu', tabChart:'Wykres', tabList:'Lista', tabSet:'Opcje',
+    roams:'Przełączenia między AP', noRoams:'Jeszcze nie było przełączeń.',
+    scanNow:'Skanuj teraz', chartTitle:'Siła sygnału (ostatnie 5 minut)',
+    calcLabel:'Sprawdź BSSID ręcznie (całość albo końcówka)', listLabel:'Twoje AP: w każdej linii nazwa i MAC albo BSSID (z * na końcu = wszystkie SSID tego radia)',
+    export:'Eksportuj do .txt', share:'Udostępnij', import:'Importuj z .txt (dopisz brakujące)', clear:'Wyczyść listę', clearSure:'Na pewno? Kliknij jeszcze raz',
+    mode:'Tryb rozpoznawania AP', modeUni:'Uniwersalny',
+    modeUniD:'Działa z każdym producentem. AP nazywasz plusem, a apka zapamiętuje jego BSSID-y (możesz od razu zaznaczyć pozostałe pasma tego samego urządzenia).',
+    modeArubaD:'Dla AP-ków Aruba: z BSSID wylicza MAC urządzenia z panelu, więc jedna nazwa obejmuje od razu wszystkie pasma i SSID. Nazwy z trybu uniwersalnego dalej działają.',
+    optSound:'Dźwięk przy zmianie AP', optSoundD:'Krótki sygnał, gdy telefon przełączy się na inny AP', test:'Test',
+    optVib:'Wibracja przy zmianie AP', optVibD:'Krótka podwójna wibracja',
+    optBg:'Monitorowanie w tle', optBgD:'Powiadomienie z aktualnym AP; dźwięk i wibracja przy zmianie AP działają też z wygaszonym ekranem (zużywa więcej baterii)',
+    optSticky:'Wykrywaj przyklejenie do słabszego AP', optStickyD:'Ostrzega, gdy ta sama sieć jest na innym AP mocniejsza o 12 dB lub więcej',
+    stickyT:'Telefon trzyma się słabszego AP', stickyD:'Ta sama sieć jest mocniejsza na: {n} ({l} dBm, o {d} dB lepiej)',
+    tileT:'Kafelek w szybkich ustawieniach', tileD:'Rozwiń pasek u góry ekranu → ołówek (edytuj) → przeciągnij „WiFi SriFi”. Kafelek pokazuje AP, pasmo i %. Przy wygaszonej apce działa najpewniej z włączonym monitorowaniem w tle.',
+    chTitle:'Zajętość kanałów (ostatni skan)', chNets:'{n} sieci', chNote:'Liczone po kanale głównym. ● = Twój kanał. Mniej sieci i słabsze sygnały = lepszy kanał.',
+    optScreen:'Ekran nie gaśnie', optScreenD:'Przydatne przy chodzeniu po budynku z apką na wierzchu',
+    lang:'Język', nameTitle:'Nazwij urządzenie', save:'Zapisz', cancel:'Anuluj', namePh:'np. MikroTik sypialnia',
+    unknownAp:'Nieznany AP', notOnList:'spoza listy', chan:'kanał', width:'szer.',
+    signal:'Sygnał', dist:'≈ {d} od AP', excellent:'świetny', good:'dobry', fair:'słaby', poor:'bardzo słaby',
+    vendor:'Producent', vendorLocal:'adres wirtualny (dodatkowy SSID)', vendorProb:'prawdopodobnie {v}', vendorUnknown:'nieznany',
+    arubaMac:'MAC AP (Aruba)', speedTitle:'Połączenie',
+    rx:'Od routera (pobieranie)', tx:'Do routera (wysyłanie)', maxSp:'Maks. dla tego połączenia', std:'Standard', ipL:'IP telefonu', macL:'MAC telefonu', macHidden:'Android ukrywa go przed aplikacjami', macBtn:'Ustawienia Wi-Fi (MAC, hasło)', sigTile:'siła sygnału', dl1:'W chuj blisko', dl2:'Blisko', dl3:'Średnio', dl4:'Daleko', dl5:'Daleko jak ja pierdolę', distTile:'od AP', pwHowTo:'Hasło: Android nie udostępnia go aplikacjom. Zobaczysz je w ustawieniach: szczegóły sieci → Udostępnij (kod QR, w wielu telefonach hasło jest też pod kodem).', macHowTo:'Stały MAC dla tej sieci:', gwL:'Brama', dnsL:'DNS',
+    lowSpeed:'Router wysyła do telefonu tylko {s}, choć połączenie pozwala na {m}, a sygnał jest dobry. Router mógł „zablokować” prędkość na minimum – pomaga rozłączenie i ponowne połączenie Wi-Fi. Sprawdzaj w trakcie transferu (np. testu prędkości), bo w spoczynku wartość bywa niska.',
+    noPerm:'Brak uprawnienia do lokalizacji. Bez niego Android nie pokaże BSSID żadnej aplikacji.', grant:'Nadaj uprawnienie',
+    noLoc:'Lokalizacja w telefonie jest wyłączona – bez niej Android ukrywa BSSID.', locOn:'Włącz lokalizację',
+    noWifi:'Wi-Fi jest wyłączone.', wifiSet:'Ustawienia Wi-Fi', notConn:'Nie połączono z żadną siecią Wi-Fi.',
+    browserOnly:'Tryb na żywo, skanowanie i wykres działają w aplikacji na Androidzie.',
+    scanAgo:'Ostatni skan: {s} s temu · {n} sieci', scanThrottled:'Android ograniczył skanowanie (max ok. 4 skany na 2 minuty) – pokazuję wyniki z ostatniego skanu.',
+    scanAuto:'Lista odświeża się sama co 30 s, gdy ta zakładka jest otwarta. Dotknij AP, żeby go nazwać.',
+    connected:'połączony', hidden:'(ukryta sieć)', nearEmpty:'Brak wyników – dotknij „Skanuj teraz”.',
+    coverTitle:'Ta nazwa od razu obejmie (ten sam początek adresu):', candTitle:'Inne BSSID-y, które wyglądają na to samo urządzenie (podobny adres). Zaznacz, żeby nadać im tę samą nazwę:',
+    candNone:'Nie widzę innych BSSID-ów tego urządzenia w ostatnim skanie. Jeśli ma inne pasma, nazwij je osobno albo zeskanuj w jego pobliżu.',
+    arubaSaveInfo:'Tryb Aruba: nazwa obejmie wszystkie pasma i SSID tego AP.',
+    added:'Dodano {n} nowych AP', added1:'Dodano 1 nowy AP', skipped:', pominięto {n} (już są na liście)', importErr:'Nie udało się odczytać pliku.', importNone:'W pliku nie ma żadnych AP (linii z nazwą i MAC-iem).',
+    listEmpty:'Lista jest pusta.', saved:'Zapisano w Pobranych: {f} ({n} AP)', oldAndroid:'Zapis do pliku działa od Androida 10 – użyj „Udostępnij”.', saveErr:'Błąd zapisu: {e}',
+    colName:'Nazwa', colKey:'Adres', kBssid:'BSSID radia', kMac:'MAC AP', localNote:'Lista jest zapisana tylko w tym telefonie.',
+    calcEmpty:'Wpisz BSSID, np. z „W pobliżu” albo z innej apki.', calcShort:'Za mało cyfr – potrzebne co najmniej 3 ostatnie bajty.',
+    calcIf24:'Jeśli 2,4 GHz, MAC AP:', calcIf5:'Jeśli 5 GHz, MAC AP:', calcNoMatch:'Nie ma go na Twojej liście.',
+    about:'Wersja {v} · tryb uniwersalny + przeliczanie BSSID → MAC dla Aruby.',
+  },
+  en: {
+    tabLive:'Live', tabNear:'Nearby', tabChart:'Chart', tabList:'List', tabSet:'Settings',
+    roams:'AP switches (roaming)', noRoams:'No switches yet.',
+    scanNow:'Scan now', chartTitle:'Signal strength (last 5 minutes)',
+    calcLabel:'Check a BSSID manually (full or the last bytes)', listLabel:'Your APs: one per line, name and MAC or BSSID (ending with * = every SSID of that radio)',
+    export:'Export to .txt', share:'Share', import:'Import from .txt (add missing)', clear:'Clear list', clearSure:'Sure? Tap again',
+    mode:'AP identification mode', modeUni:'Universal',
+    modeUniD:'Works with any vendor. Name an AP with the plus button and the app remembers its BSSIDs (you can tick the other bands of the same device right away).',
+    modeArubaD:'For Aruba APs: converts the BSSID to the device MAC shown in the panel, so one name covers every band and SSID. Names from universal mode still work.',
+    optSound:'Sound on AP switch', optSoundD:'Short chime when the phone roams to another AP', test:'Test',
+    optVib:'Vibrate on AP switch', optVibD:'Short double buzz',
+    optBg:'Background monitoring', optBgD:'Notification with the current AP; sound and vibration on AP switch also work with the screen off (uses more battery)',
+    optSticky:'Detect sticking to a weaker AP', optStickyD:'Warns when the same network is 12 dB or more stronger on another AP',
+    stickyT:'The phone is sticking to a weaker AP', stickyD:'The same network is stronger on: {n} ({l} dBm, {d} dB better)',
+    tileT:'Quick Settings tile', tileD:'Pull down the top bar → pencil (edit) → drag “WiFi SriFi”. The tile shows the AP, band and %. With the app closed it works best with background monitoring on.',
+    chTitle:'Channel usage (last scan)', chNets:'{n} networks', chNote:'Counted by primary channel. ● = your channel. Fewer networks and weaker signals = a better channel.',
+    optScreen:'Keep screen on', optScreenD:'Handy when walking around with the app open',
+    lang:'Language', nameTitle:'Name this device', save:'Save', cancel:'Cancel', namePh:'e.g. Bedroom MikroTik',
+    unknownAp:'Unknown AP', notOnList:'not on your list', chan:'channel', width:'width',
+    signal:'Signal', dist:'≈ {d} from the AP', excellent:'excellent', good:'good', fair:'weak', poor:'very weak',
+    vendor:'Vendor', vendorLocal:'virtual address (extra SSID)', vendorProb:'probably {v}', vendorUnknown:'unknown',
+    arubaMac:'AP MAC (Aruba)', speedTitle:'Connection',
+    rx:'From router (download)', tx:'To router (upload)', maxSp:'Max for this link', std:'Standard', ipL:'Phone IP', macL:'Phone MAC', macHidden:'Android hides it from apps', macBtn:'Wi-Fi settings (MAC, password)', sigTile:'signal strength', dl1:'Fucking close', dl2:'Close', dl3:'Medium', dl4:'Far', dl5:'Far as fuck', distTile:'from the AP', pwHowTo:'Password: Android does not give it to apps. You can see it in settings: network details → Share (QR code; many phones also show the password under it).', macHowTo:'Fixed MAC for this network:', gwL:'Gateway', dnsL:'DNS',
+    lowSpeed:'The router sends to the phone at only {s} although the link allows {m} and the signal is good. The router may have locked the rate at the minimum – reconnecting Wi-Fi usually fixes it. Check during a transfer (e.g. a speed test), as the value is often low when idle.',
+    noPerm:'Location permission is missing. Without it Android hides the BSSID from every app.', grant:'Grant permission',
+    noLoc:'Location is turned off – Android hides the BSSID without it.', locOn:'Turn on location',
+    noWifi:'Wi-Fi is turned off.', wifiSet:'Wi-Fi settings', notConn:'Not connected to any Wi-Fi network.',
+    browserOnly:'Live view, scanning and the chart work in the Android app.',
+    scanAgo:'Last scan: {s} s ago · {n} networks', scanThrottled:'Android throttled scanning (about 4 scans per 2 minutes) – showing the last results.',
+    scanAuto:'The list refreshes every 30 s while this tab is open. Tap an AP to name it.',
+    connected:'connected', hidden:'(hidden network)', nearEmpty:'No results – tap “Scan now”.',
+    coverTitle:'This name automatically covers (same address prefix):', candTitle:'Other BSSIDs that look like the same device (similar address). Tick them to give them the same name:',
+    candNone:'No other BSSIDs of this device in the last scan. If it has other bands, name them separately or scan near it.',
+    arubaSaveInfo:'Aruba mode: the name covers every band and SSID of this AP.',
+    added:'Added {n} new APs', added1:'Added 1 new AP', skipped:', skipped {n} (already on the list)', importErr:'Could not read the file.', importNone:'No APs in the file (lines with a name and a MAC).',
+    listEmpty:'The list is empty.', saved:'Saved to Downloads: {f} ({n} APs)', oldAndroid:'Saving a file needs Android 10+ – use “Share”.', saveErr:'Save error: {e}',
+    colName:'Name', colKey:'Address', kBssid:'radio BSSID', kMac:'AP MAC', localNote:'The list is stored only on this phone.',
+    calcEmpty:'Enter a BSSID, e.g. from “Nearby” or another app.', calcShort:'Too few digits – at least the last 3 bytes are needed.',
+    calcIf24:'If 2.4 GHz, AP MAC:', calcIf5:'If 5 GHz, AP MAC:', calcNoMatch:'Not on your list.',
+    about:'Version {v} · universal mode + BSSID → MAC conversion for Aruba.',
+  }
+};
+
+/* =========================================================
+   Pomocnicze
+   ========================================================= */
+const APP_NAME = 'WiFi SriFi';   // ta sama nazwa co pod ikoną (res/values/strings.xml)
+const $ = id => document.getElementById(id);
+const A = window.Android || null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const hex = (n, len) => n.toString(16).toUpperCase().padStart(len, '0');
+const pairs = s => s.match(/.{1,2}/g).join(':');
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+let S = { mode:'universal', sound:true, vib:true, screen:false, bg:false, sticky:false, lang:(navigator.language || 'pl').toLowerCase().startsWith('pl') ? 'pl' : 'en' };
+try { Object.assign(S, JSON.parse(lsGet('apidSettings', '{}'))); } catch (e) {}
+const saveSettings = () => { lsSet('apidSettings', JSON.stringify(S)); syncNative(); };
+function syncNative() {
+  if (!A || !A.syncState) return;
+  try { A.syncState(lsGet('apList', ''), JSON.stringify({ mode: S.mode, lang: S.lang, sound: S.sound, vib: S.vib, sticky: S.sticky })); } catch (e) {}
+}
+
+function t(k, v) {
+  let s = (I18N[S.lang] && I18N[S.lang][k]) || I18N.pl[k] || k;
+  if (v) for (const x in v) s = s.split('{' + x + '}').join(v[x]);
+  return s;
+}
+
+/* BSSID / MAC: 12 cyfr hex albo null */
+function norm(s) {
+  const h = String(s || '').replace(/[^0-9a-f]/gi, '').toUpperCase();
+  return h.length === 12 ? h : null;
+}
+function bandOf(f) { return f >= 2400 && f < 2500 ? '24' : f >= 4900 && f < 5900 ? '5' : f >= 5925 && f < 7200 ? '6' : null; }
+function chanOf(f) { return f >= 2412 && f <= 2472 ? (f - 2407) / 5 : f === 2484 ? 14 : f >= 5000 && f < 5900 ? (f - 5000) / 5 : f >= 5955 ? (f - 5950) / 5 : '?'; }
+function bandBadge(b, sm) {
+  const txt = b === '24' ? '2,4 GHz' : b === '5' ? '5 GHz' : b === '6' ? '6 GHz' : '?';
+  return `<span class="band ${sm ? 'sm ' : ''}${b ? 'b' + b : 'bx'}">${S.lang === 'en' ? txt.replace(',', '.') : txt}</span>`;
+}
+function pctOf(rssi) { return clamp(Math.round(2 * (rssi + 100)), 0, 100); }
+function qual(p) { return p >= 80 ? ['excellent', 'var(--ok)'] : p >= 60 ? ['good', '#a6e05a'] : p >= 40 ? ['fair', 'var(--warn)'] : ['poor', 'var(--bad)']; }
+function distM(rssi, f) { return Math.pow(10, (27.55 - 20 * Math.log10(f) + Math.abs(rssi)) / 20); }
+function distParts(d) { const n = d < 10 ? d.toFixed(1) : String(Math.round(d)); return d < 1 ? ['< 1', 'm'] : [S.lang === 'pl' ? n.replace('.', ',') : n, 'm']; }
+function distTxt(d) { const n = d < 10 ? d.toFixed(1) : String(Math.round(d)); return d < 1 ? '< 1 m' : (S.lang === 'pl' ? n.replace('.', ',') : n) + ' m'; }
+function speedTxt(x) { return x > 0 ? x + ' Mb/s' : '–'; }
+
+/* ---------- ikony ---------- */
+const ICON_WIFI = (n, c) => { const off = '#3a424c', a = k => (n >= k ? c : off);
+  return `<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0" stroke="${a(3)}"/><path d="M5.2 12a10.5 10.5 0 0 1 13.6 0" stroke="${a(2)}"/><path d="M8.5 15.5a5 5 0 0 1 7 0" stroke="${a(1)}"/><circle cx="12" cy="19" r="1.6" fill="${c}" stroke="none"/></svg>`; };
+const ICON_ROUTER = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#3ea6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M11 16.5h.01M15 13l2-6M8.5 7.5a6 6 0 0 1 8.5-2.2M10.5 9.5a3 3 0 0 1 4.3-1.1"/></svg>`;
+function sigLevel(p) { return p >= 75 ? [3, '#4fe0d0'] : p >= 45 ? [2, '#ff9f1a'] : [1, '#ff5a5a']; }
+function distLabel(d) { return d < 1 ? t('dl1') : d < 3 ? t('dl2') : d < 10 ? t('dl3') : d < 25 ? t('dl4') : t('dl5'); }
+function distPos(d) { return clamp((Math.log10(clamp(d, 0.5, 50)) - Math.log10(0.5)) / 2, 0, 1) * 100; }
+const ICON_SIG = c => `<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1.4" fill="${c}"/></svg>`;
+const ICON_DIST = c => `<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></svg>`;
+const ICON_KEY = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:-3px;margin-right:4px"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>`;
+
+/* ---------- gdzie w telefonie ustawić stały MAC dla sieci ---------- */
+const MAC_HOWTO = {
+  xiaomi:  { pl:'Wi-Fi → strzałka przy sieci → Prywatność → Użyj MAC urządzenia', en:'Wi-Fi → arrow next to the network → Privacy → Use device MAC' },
+  samsung: { pl:'Wi-Fi → ⚙ przy sieci → Wyświetl więcej → Typ adresu MAC → MAC telefonu', en:'Wi-Fi → ⚙ next to the network → View more → MAC address type → Phone MAC' },
+  google:  { pl:'Wi-Fi → ⚙ przy sieci → Prywatność → Użyj MAC urządzenia', en:'Wi-Fi → ⚙ next to the network → Privacy → Use device MAC' },
+  oplus:   { pl:'Wi-Fi → ⓘ przy sieci → Prywatność → Użyj MAC urządzenia', en:'Wi-Fi → ⓘ next to the network → Privacy → Use device MAC' },
+  huawei:  { pl:'Wi-Fi → przytrzymaj sieć → Modyfikuj sieć → Typ adresu MAC → MAC urządzenia', en:'Wi-Fi → long-press the network → Modify network → MAC address type → Device MAC' },
+  other:   { pl:'Wi-Fi → szczegóły sieci → Prywatność / Typ adresu MAC → MAC urządzenia (telefonu)', en:'Wi-Fi → network details → Privacy / MAC address type → Device (phone) MAC' },
+};
+const PW_HOWTO = {
+  xiaomi:  { pl:'Hasło: strzałka przy sieci → Udostępnij – hasło jest pod kodem QR', en:'Password: arrow next to the network → Share – the password is under the QR code' },
+  samsung: { pl:'Hasło: ⚙ przy sieci → ikona oka przy polu Hasło', en:'Password: ⚙ next to the network → eye icon next to Password' },
+  google:  { pl:'Hasło: ⚙ przy sieci → Udostępnij – hasło jest pod kodem QR', en:'Password: ⚙ next to the network → Share – the password is under the QR code' },
+  oplus:   { pl:'Hasło: ⓘ przy sieci → Udostępnij (kod QR, hasło pod kodem)', en:'Password: ⓘ next to the network → Share (QR code, password below it)' },
+  huawei:  { pl:'Hasło: dotknij połączonej sieci → kod QR (zeskanuj go aparatem drugiego telefonu)', en:'Password: tap the connected network → QR code (scan it with another phone camera)' },
+  other:   { pl:'Hasło: szczegóły sieci → Udostępnij (kod QR; często hasło jest pod kodem)', en:'Password: network details → Share (QR code; the password is often shown below)' },
+};
+function phoneKind() {
+  const m = ((st.maker || '') + ' ' + (st.brand || '')).toLowerCase();
+  return /xiaomi|redmi|poco/.test(m) ? 'xiaomi' : /samsung/.test(m) ? 'samsung' : /google|motorola|nokia|hmd/.test(m) ? 'google'
+       : /oneplus|oppo|realme/.test(m) ? 'oplus' : /huawei|honor/.test(m) ? 'huawei' : 'other';
+}
+function macHowTo() { const k = phoneKind(); return MAC_HOWTO[k][S.lang] || MAC_HOWTO[k].pl; }
+function pwHowTo() { const k = phoneKind(); return PW_HOWTO[k][S.lang] || PW_HOWTO[k].pl; }
+
+/* ---------- producent z OUI ---------- */
+let OUI = null;
+function vendorOf(h) {
+  if (!h) return '';
+  if (!OUI) {
+    OUI = new Map();
+    if (window.OUI_RAW) for (const e of OUI_RAW.split(';')) OUI.set(e.slice(0, 6), parseInt(e.slice(6), 16));
+  }
+  const look = p => OUI.has(p) ? OUI_NAMES[OUI.get(p)] : null;
+  const b0 = parseInt(h.slice(0, 2), 16);
+  if (b0 & 2) {                          // bit "lokalnie administrowany" = adres wirtualny
+    const base = look(hex(b0 & ~2, 2) + h.slice(2, 6));
+    return base ? t('vendorProb', { v: base }) + ' · ' + t('vendorLocal') : t('vendorLocal');
+  }
+  return look(h.slice(0, 6)) || t('vendorUnknown');
+}
+
+/* =========================================================
+   Lista AP
+   linie:  "Nazwa  9C:8C:D8:A1:B2:C8"   -> MAC urządzenia (Aruba) albo dokładny BSSID
+           "Nazwa  D0:EA:11:3A:7C:1*"   -> wszystkie BSSID-y z tym początkiem (jedno radio)
+           "?" w miejscu cyfry          -> cyfra nieznana (MAC wyliczony z BSSID Aruby)
+   ========================================================= */
+const RE_ADDR = /(?<![0-9a-f])(?:[0-9a-f?]{2}[:\-.]?){5}(?:[0-9a-f?]{2}|[0-9a-f]\*)(?![0-9a-f])/i;
+let aps = [];
+function parseList(text) {
+  const out = [];
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = line.match(RE_ADDR);
+    if (!m) continue;
+    const tok = m[0].replace(/[:\-.]/g, '').toUpperCase();
+    const name = line.replace(m[0], '').replace(/^[\s,;\t"']+|[\s,;\t"']+$/g, '').replace(/[\s,;\t"']{2,}/g, ' ') || '(?)';
+    if (tok.endsWith('*')) {
+      const core = tok.slice(0, 11);
+      if (!/^[0-9A-F]{11}$/.test(core)) continue;
+      out.push({ name, kind: 'bssid', core, disp: pairs(core + '*') });
+    } else {
+      if (tok.length !== 12) continue;
+      out.push({ name, kind: 'mac', hex: tok, q: tok.includes('?'), disp: pairs(tok) });
+    }
+  }
+  return out;
+}
+const entryKey = e => e.kind === 'bssid' ? 'B' + e.core : 'M' + e.hex.slice(0, 6) + (parseInt(e.hex.slice(6).replace('?', '0'), 16) & 0xFFFFF);
+function loadList() { $('list').value = lsGet('apList', ''); aps = parseList($('list').value); }
+function storeList() { lsSet('apList', $('list').value); aps = parseList($('list').value); renderTable(); syncNative(); }
+function appendLines(lines) {
+  const v = $('list').value.replace(/\s+$/, '');
+  $('list').value = (v ? v + '\n' : '') + lines.join('\n');
+  storeList();
+}
+
+/* Aruba: BSSID -> dolne 20 bitów MAC (wg bazy wiedzy Aruby) */
+function arubaWant(h, band) {
+  const known = ((parseInt(h.slice(6), 16) >> 4) ^ 0x80000) & 0xFFFFF;
+  return band === '24' ? known : (known - 1) & 0xFFFFF;
+}
+function arubaMacTxt(h, band) { const w = hex(arubaWant(h, band), 5); return pairs(h.slice(0, 6)) + ':?' + w[0] + ':' + w.slice(1, 3) + ':' + w.slice(3); }
+
+/* Rozpoznanie AP po BSSID */
+function identify(h, band) {
+  if (!h) return null;
+  let e = null, mac = null;
+  if (S.mode === 'aruba' && (band === '24' || band === '5')) {
+    const want = arubaWant(h, band);
+    mac = arubaMacTxt(h, band);
+    e = aps.find(a => a.kind === 'mac' && a.hex.slice(0, 6) === h.slice(0, 6) && (parseInt(a.hex.slice(6).replace('?', '0'), 16) & 0xFFFFF) === want);
+    if (e) mac = e.disp;
+  }
+  if (!e) e = aps.find(a => (a.kind === 'bssid' && h.startsWith(a.core)) || (a.kind === 'mac' && !a.q && a.hex === h));
+  return { entry: e || null, name: e ? e.name : null, mac };
+}
+
+/* =========================================================
+   Zakładki i ustawienia
+   ========================================================= */
+let tab = lsGet('apidTab', 'live');
+function showTab(x) {
+  tab = x; lsSet('apidTab', x);
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === x));
+  document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + x));
+  if (x === 'near') maybeScan(true);
+  if (x === 'chart') { drawChart(); readScan(); renderChannels(); }
+}
+function applyI18n() {
+  document.documentElement.lang = S.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+  $('nmName').placeholder = t('namePh');
+  $('title').innerHTML = APP_NAME.replace(/^(\S+) /, '$1 <span>') + '</span>';
+  $('modeChip').textContent = S.mode === 'aruba' ? 'Aruba' : t('modeUni');
+  $('modeDesc').textContent = S.mode === 'aruba' ? t('modeArubaD') : t('modeUniD');
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.mode));
+  document.querySelectorAll('#langSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lang));
+  let ver = '';
+  try { ver = A ? JSON.parse(A.status()).version : ''; } catch (e) {}
+  $('about').innerHTML = esc(t('about', { v: ver || '–' })) + '<br><a style="color:var(--acc)" href="https://github.com/nyorbee/WiFi_SriFi">github.com/nyorbee/WiFi_SriFi</a>';
+  document.querySelectorAll('.native').forEach(el => el.style.display = A ? '' : 'none');
+  renderAll();
+}
+function renderAll() { renderTable(); renderCalc(); renderLive(); renderNear(); renderHist(); if (tab === 'chart') { drawChart(); renderChannels(); } }
+
+/* =========================================================
+   NA ŻYWO
+   ========================================================= */
+let cur = null;           // ostatni odczyt połączenia
+let st = { perm: true, location: true, wifi: true };
+let lastBssid = null;
+const roams = [];         // {time, name, band, h}
+const samples = [];       // {t, r, h, name}
+const rssiBuf = [];
+let lowSince = 0;
+
+function readStatus() { if (!A) return; try { st = JSON.parse(A.status()); } catch (e) {} }
+
+function tick() {
+  if (!A) return;
+  let o = {};
+  try { o = JSON.parse(A.info()); } catch (e) {}
+  const h = norm(o.bssid);
+  const valid = h && h !== '020000000000' && o.freq > 0;
+  cur = valid ? Object.assign(o, { h, band: bandOf(o.freq) }) : null;
+
+  if (cur) {
+    if (h !== lastBssid) rssiBuf.length = 0;
+    if (o.rssi > -127 && o.rssi < 0) { rssiBuf.push(o.rssi); if (rssiBuf.length > 5) rssiBuf.shift(); }
+    const id = identify(h, cur.band);
+    if (lastBssid && h !== lastBssid) {
+      roams.unshift({ time: new Date().toTimeString().slice(0, 8), name: id.name, band: cur.band, h });
+      roams.length = Math.min(roams.length, 15);
+      if ((S.sound || S.vib) && !S.bg) try { A.roamAlert(!!S.sound, !!S.vib); } catch (e) {}
+      renderHist();
+    }
+    lastBssid = h;
+    samples.push({ t: Date.now(), r: o.rssi, h, name: id.name, band: cur.band });
+    // ostrzeżenie o „zablokowanej” prędkości: dobry sygnał, a router wysyła wolno przez >10 s
+    // próg zależny od pasma: na 2,4 GHz (20 MHz) normalne prędkości to 72–144 Mb/s, na 5/6 GHz kilkaset
+    const lowLimit = cur.band === '24' ? 40 : 100;
+    const maxL = Math.max(o.maxRx || 0, o.maxTx || 0);
+    const low = o.rx > 0 && o.rssi >= -67 && (maxL > 0 ? (o.rx * 8 < maxL || (o.rx < lowLimit && maxL >= lowLimit * 3)) : o.rx < lowLimit);
+    lowSince = low ? (lowSince || Date.now()) : 0;
+  } else {
+    lowSince = 0;
+  }
+  while (samples.length && samples[0].t < Date.now() - 300000) samples.shift();
+  renderLive();
+  if (tab === 'chart') drawChart();
+}
+
+function renderSticky() {
+  const b = stickyInfo(), box = $('sticky');
+  if (!box) return;
+  box.innerHTML = b ? `<div class="alert bad"><b>${esc(t('stickyT'))}</b><br>${esc(t('stickyD', { n: b.name || pairs(b.h), l: b.l, d: b.l - cur.rssi }))} ${bandBadge(bandOf(b.f), true)}</div>` : '';
+}
+function renderStatus() {
+  const box = $('status');
+  if (!A) { box.innerHTML = `<div class="alert">${esc(t('browserOnly'))}</div>`; return; }
+  let h = '';
+  if (!st.perm) h += `<div class="alert bad">${esc(t('noPerm'))}<button class="acc" onclick="Android.askPermission()">${esc(t('grant'))}</button></div>`;
+  else if (!st.location) h += `<div class="alert bad">${esc(t('noLoc'))}<button class="acc" onclick="Android.openLocationSettings()">${esc(t('locOn'))}</button></div>`;
+  else if (!st.wifi) h += `<div class="alert bad">${esc(t('noWifi'))}<button class="acc" onclick="Android.openWifiSettings()">${esc(t('wifiSet'))}</button></div>`;
+  else if (!cur) h += `<div class="alert">${esc(t('notConn'))}</div>`;
+  box.innerHTML = h;
+}
+
+function scanFor(h) { return lastScan.find(r => norm(r.b) === h); }
+
+function renderLive() {
+  renderStatus(); renderSticky();
+  const lc = $('liveCard'), sc = $('speedCard');
+  if (!cur) { lc.style.display = sc.style.display = 'none'; return; }
+  lc.style.display = sc.style.display = '';
+  const o = cur, id = identify(o.h, o.band);
+  const avg = rssiBuf.length ? rssiBuf.reduce((a, b) => a + b, 0) / rssiBuf.length : o.rssi;
+  const dm = distM(avg, o.freq), dp = distParts(dm), dpos = distPos(dm);
+  const p = pctOf(o.rssi), q = qual(p);
+  const lv = sigLevel(p);
+  const sr = scanFor(o.h);
+  const widths = { 0: '20', 1: '40', 2: '80', 3: '160', 4: '80+80', 5: '320' };
+  const w = sr && widths[sr.w] ? widths[sr.w] + ' MHz' : '';
+  const ssid = String(o.ssid || '').replace(/^"|"$/g, '');
+
+  lc.innerHTML = `
+    <div style="display:flex;align-items:center">
+      <div class="name ${id.name ? '' : 'unk'}" style="flex:1">${id.name ? esc(id.name) : esc(t('unknownAp')) + ` <span class="dim">(${esc(t('notOnList'))})</span>`}</div>
+      ${id.name ? '' : `<button class="plus" onclick="openName('${o.h}', ${o.freq})">+</button>`}
+    </div>
+    <div class="bandline">${bandBadge(o.band)}<span class="dim">${esc(t('chan'))} ${chanOf(o.freq)}${w ? ' · ' + esc(t('width')) + ' ' + w : ''}</span></div>
+    <div class="dim" style="margin-top:6px">${esc(ssid)} · <span class="mono">${pairs(o.h)}</span></div>
+    <div class="dim">${esc(t('vendor'))}: ${esc(vendorOf(o.h))}</div>
+    ${S.mode === 'aruba' && id.mac ? `<div class="dim">${esc(t('arubaMac'))}: <b class="mono" style="color:var(--txt)">${esc(id.mac)}</b></div>` : ''}
+    <div class="sig"><span class="pct" style="color:${q[1]}">${p}%</span><span style="font-weight:700;color:${q[1]}">${esc(t(q[0]))}</span></div>
+    <div class="bar"><i style="width:${p}%;background:${q[1]}"></i></div>
+    <div class="dbm">${ICON_WIFI(lv[0], lv[1])}<span class="n">${o.rssi}<small>dBm</small></span></div>
+    <div class="dist"><div class="tr">${ICON_ROUTER}<div class="trk"><div class="fil" style="width:${dpos}%"></div><div class="dot" style="left:${dpos}%"></div></div></div>
+      <div class="lb"><b>≈ ${dp[0]} ${dp[1]}</b><span>${esc(distLabel(dm))}</span></div></div>`;
+
+  const stdMap = { 1: '802.11a/b/g', 4: 'Wi-Fi 4 (n)', 5: 'Wi-Fi 5 (ac)', 6: o.band === '6' ? 'Wi-Fi 6E (ax)' : 'Wi-Fi 6 (ax)', 7: '802.11ad', 8: 'Wi-Fi 7 (be)' };
+  const rx = o.rx > 0 ? o.rx : (o.rx === undefined ? o.link : 0);
+  let kv = `
+    <div class="k">${esc(t('rx'))}</div><div class="v">${speedTxt(rx)}</div>
+    <div class="k">${esc(t('tx'))}</div><div class="v">${speedTxt(o.tx > 0 ? o.tx : o.link)}</div>`;
+  if (o.maxRx > 0 || o.maxTx > 0) kv += `<div class="k">${esc(t('maxSp'))}</div><div class="v">${speedTxt(Math.max(o.maxRx || 0, o.maxTx || 0))}</div>`;
+  if (stdMap[o.std]) kv += `<div class="k">${esc(t('std'))}</div><div class="v">${stdMap[o.std]}</div>`;
+  if (o.ip) kv += `<div class="k">${esc(t('ipL'))}</div><div class="v mono">${esc(o.ip)}</div>`;
+  kv += `<div class="k">${esc(t('macL'))}</div><div class="v dim" style="font-weight:400">${esc(t('macHidden'))}</div>`;
+  if (o.gw) kv += `<div class="k">${esc(t('gwL'))}</div><div class="v mono">${esc(o.gw)}</div>`;
+  if (o.dns) kv += `<div class="k">${esc(t('dnsL'))}</div><div class="v mono">${esc(o.dns)}</div>`;
+  sc.innerHTML = `<div class="lbl">${esc(t('speedTitle'))}</div><div class="kv">${kv}</div>` +
+    `<div class="row"><button onclick="Android.openWifiSettings()">${esc(t('macBtn'))}</button></div>` +
+    `<div class="dim" style="margin-top:6px">${esc(t('macHowTo'))} ${esc(macHowTo())}</div>` +
+    `<div class="dim" style="margin-top:6px">${ICON_KEY}${esc(pwHowTo())}</div>` +
+    (lowSince && Date.now() - lowSince > 10000 ? `<div class="alert">${esc(t('lowSpeed', { s: speedTxt(o.rx), m: speedTxt(Math.max(o.maxRx || 0, o.maxTx || 0)) }))}</div>` : '');
+}
+
+function stickyInfo() {
+  if (!S.sticky || !cur || cur.rssi > -65) return null;
+  const ssid = String(cur.ssid || '').replace(/^"|"$/g, ''), myName = identify(cur.h, cur.band).name;
+  let best = null;
+  for (const r of lastScan) {
+    const x = norm(r.b);
+    if (!x || r.s !== ssid || (r.age || 0) > 90) continue;
+    if (x.slice(0, 11) === cur.h.slice(0, 11) || x.slice(2, 10) === cur.h.slice(2, 10)) continue;
+    const xn = identify(x, bandOf(r.f)).name;
+    if (myName && xn === myName) continue;
+    if (!best || r.l > best.l) best = Object.assign({ name: xn, h: x }, r);
+  }
+  return best && best.l - cur.rssi >= 12 ? best : null;
+}
+function renderHist() {
+  $('hist').innerHTML = roams.length
+    ? roams.map(r => `${r.time} → ${r.name ? esc(r.name) : pairs(r.h)} ${bandBadge(r.band, true)}`).join('<br>')
+    : esc(t('noRoams'));
+}
+
+/* =========================================================
+   W POBLIŻU
+   ========================================================= */
+let lastScan = [], lastScanAt = 0, throttled = false;
+function readScan() { if (!A) return; try { lastScan = JSON.parse(A.scanResults()); } catch (e) { lastScan = []; } }
+function maybeScan(force) {
+  if (!A) return;
+  if (force || Date.now() - lastScanAt > 30000) {
+    throttled = !A.scan();
+    lastScanAt = Date.now();
+    setTimeout(() => { readScan(); renderNear(); }, 3500);
+  }
+  readScan(); renderNear();
+}
+function renderNear() {
+  if (!A) { $('nearList').innerHTML = `<div class="dim">${esc(t('browserOnly'))}</div>`; $('scanInfo').textContent = ''; return; }
+  const age = lastScan.length ? Math.min(...lastScan.map(r => r.age || 0)) : 0;
+  $('scanInfo').innerHTML = (lastScan.length ? esc(t('scanAgo', { s: age, n: lastScan.length })) + '<br>' : '') +
+    (throttled ? `<span class="warn">${esc(t('scanThrottled'))}</span><br>` : '') + esc(t('scanAuto'));
+  if (!lastScan.length) { $('nearList').innerHTML = `<div class="dim">${esc(t('nearEmpty'))}</div>`; return; }
+  const rows = lastScan.slice().sort((a, b) => b.l - a.l).map(r => {
+    const h = norm(r.b), band = bandOf(r.f), id = identify(h, band), p = pctOf(r.l), q = qual(p);
+    const isCur = cur && cur.h === h;
+    const lv = sigLevel(p), dm = distM(r.l, r.f), dp = distParts(dm);
+    return `<div class="ap ${isCur ? 'cur' : ''}" onclick="openName('${h}', ${r.f})">
+      <div class="t"><span class="n">${id.name ? `<span class="ok">${esc(id.name)}</span>` : esc(r.s || t('hidden'))}</span>${bandBadge(band, true)}<span class="p" style="color:${q[1]}">${p}%</span></div>
+      <div class="m">${ICON_WIFI(lv[0], lv[1])}<span class="db">${r.l}<small>dBm</small></span><span class="ds">≈ ${dp[0]} ${dp[1]}</span><span class="dl">${esc(distLabel(dm))}</span></div>
+      <div class="dim">${id.name ? esc(r.s) + ' · ' : ''}<span class="mono">${pairs(h)}</span> · ${esc(t('chan'))} ${chanOf(r.f)}${isCur ? ` · <b class="ok">● ${esc(t('connected'))}</b>` : ''}</div>
+      <div class="dim">${esc(vendorOf(h))}</div>
+      <div class="bar sm"><i style="width:${p}%;background:${q[1]}"></i></div></div>`;
+  });
+  $('nearList').innerHTML = rows.join('');
+}
+
+/* =========================================================
+   Nazywanie AP
+   ========================================================= */
+let nm = null;
+function openName(h, freq) {
+  const band = bandOf(freq);
+  const id = identify(h, band);
+  nm = { h, band };
+  $('nmName').value = id.name || '';
+  const vendor = vendorOf(h);
+  const arubaWay = S.mode === 'aruba' && (band === '24' || band === '5');
+  $('nmInfo').innerHTML = `${bandBadge(band, true)} <span class="mono">${pairs(h)}</span><br>${esc(t('vendor'))}: ${esc(vendor)}` +
+    (arubaWay ? `<br><span class="ok">${esc(t('arubaSaveInfo'))}</span>` : '');
+  // inne BSSID-y tego samego urządzenia: bajty 2–5 adresu takie same (pomijamy bit adresu wirtualnego i ostatni bajt)
+  let cands = '';
+  if (!arubaWay) {
+    const same = lastScan.filter(r => { const x = norm(r.b); return x && x.slice(0, 11) === h.slice(0, 11); });
+    if (same.length) cands += `<div class="dim" style="margin-bottom:4px">${esc(t('coverTitle'))}</div>` + same.map(r =>
+      `<div class="cand" style="opacity:.85"><span style="width:22px;text-align:center" class="ok">✓</span><span>${bandBadge(bandOf(r.f), true)} <span class="mono">${pairs(norm(r.b))}</span><br><span class="dim">${esc(r.s || t('hidden'))} · ${pctOf(r.l)}%</span></span></div>`).join('') + '<div style="height:10px"></div>';
+    if (A && Date.now() - lastScanAt > 30000) maybeScan(true);
+    const groups = new Map();
+    for (const r of lastScan) {
+      const x = norm(r.b);
+      if (!x || x.slice(0, 11) === h.slice(0, 11)) continue;
+      if (x.slice(2, 10) !== h.slice(2, 10)) continue;
+      const core = x.slice(0, 11);
+      const g = groups.get(core) || { core, items: [] };
+      g.items.push(r); groups.set(core, g);
+    }
+    if (groups.size) {
+      cands += `<div class="dim" style="margin-bottom:4px">${esc(t('candTitle'))}</div>` + [...groups.values()].map(g => {
+        const named = aps.some(a => a.kind === 'bssid' && a.core === g.core);
+        const bands = [...new Set(g.items.map(r => bandOf(r.f)))].map(b => bandBadge(b, true)).join(' ');
+        const ss = [...new Set(g.items.map(r => r.s || '?'))].map(esc).join(', ');
+        const best = Math.max(...g.items.map(r => r.l));
+        return `<label class="cand"><input type="checkbox" data-core="${g.core}" ${named ? '' : 'checked'}>
+          <span>${bands} <span class="mono">${pairs(g.core + '*')}</span><br><span class="dim">${ss} · ${pctOf(best)}% (${best} dBm)</span></span></label>`;
+      }).join('');
+    } else cands += `<div class="dim">${esc(t('candNone'))}</div>`;
+  }
+  $('nmCands').innerHTML = cands;
+  $('nameModal').classList.add('on');
+  setTimeout(() => $('nmName').focus(), 50);
+}
+function closeName() { $('nameModal').classList.remove('on'); nm = null; }
+function saveName() {
+  const n = $('nmName').value.trim();
+  if (!n || !nm) { $('nmName').focus(); return; }
+  const { h, band } = nm;
+  const keep = aps.filter(a => {
+    // usuń stare wpisy dla tych samych adresów (zmiana nazwy)
+    if (S.mode === 'aruba' && (band === '24' || band === '5') && a.kind === 'mac') {
+      const w = arubaWant(h, band);
+      return !(a.hex.slice(0, 6) === h.slice(0, 6) && (parseInt(a.hex.slice(6).replace('?', '0'), 16) & 0xFFFFF) === w);
+    }
+    return true;
+  });
+  const lines = [];
+  if (S.mode === 'aruba' && (band === '24' || band === '5')) {
+    lines.push(n + '  ' + arubaMacTxt(h, band));
+  } else {
+    const cores = [h.slice(0, 11)];
+    document.querySelectorAll('#nmCands input:checked').forEach(c => cores.push(c.dataset.core));
+    for (const c of new Set(cores)) lines.push(n + '  ' + pairs(c + '*'));
+  }
+  // przebuduj listę: stare wpisy z tymi samymi rdzeniami zastępujemy
+  const newCores = new Set(lines.map(l => parseList(l)[0]).filter(e => e.kind === 'bssid').map(e => e.core));
+  const kept = $('list').value.split(/\r?\n/).filter(l => {
+    const e = parseList(l)[0];
+    if (!e) return l.trim() !== '';
+    if (e.kind === 'bssid' && newCores.has(e.core)) return false;
+    return keep.some(k => k.disp === e.disp && k.name === e.name) || e.kind === 'bssid';
+  });
+  $('list').value = kept.join('\n');
+  appendLines(lines);
+  closeName();
+  renderAll();
+}
+
+/* =========================================================
+   WYKRES
+   ========================================================= */
+const PALETTE = ['#3ddc84', '#3ea6ff', '#ffb020', '#b36bff', '#ff6b9a', '#4fe0d0', '#ff8a3d', '#c9e265'];
+const apColors = new Map();
+function colorFor(key) { if (!apColors.has(key)) apColors.set(key, PALETTE[apColors.size % PALETTE.length]); return apColors.get(key); }
+function drawChart() {
+  const c = $('chart'); if (!c) return;
+  const dpr = window.devicePixelRatio || 1, W = c.clientWidth || 360, H = 260;
+  c.width = W * dpr; c.height = H * dpr; c.style.height = H + 'px';
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const L = 40, R = 40, T = 10, B = 22, now = Date.now(), span = 300000;
+  const x = tm => L + (W - L - R) * (1 - (now - tm) / span), y = r => T + (H - T - B) * (-30 - clamp(r, -100, -30)) / 70;
+  g.font = '11px system-ui'; g.lineWidth = 1;
+  for (let r = -30; r >= -100; r -= 10) {
+    g.strokeStyle = '#2b323b'; g.beginPath(); g.moveTo(L, y(r)); g.lineTo(W - R, y(r)); g.stroke();
+    g.fillStyle = '#8b95a1'; g.textAlign = 'right'; g.fillText(r, L - 6, y(r) + 4);
+    if (r <= -50) { g.textAlign = 'left'; g.fillText(pctOf(r) + '%', W - R + 6, y(r) + 4); }
+  }
+  g.textAlign = 'center';
+  for (let m = 0; m <= 5; m++) g.fillText(m === 0 ? (S.lang === 'pl' ? 'teraz' : 'now') : '-' + m + ' min', x(now - m * 60000), H - 6);
+  const legend = new Map();
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1], b = samples[i];
+    if (b.t - a.t > 5000) continue;
+    const key = b.name || pairs(b.h);
+    const col = colorFor(key); legend.set(key, { col, band: b.band });
+    g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x(a.t), y(a.r)); g.lineTo(x(b.t), y(b.r)); g.stroke();
+    if (a.h !== b.h) {
+      g.save(); g.setLineDash([4, 4]); g.strokeStyle = '#e8ecf0'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x(b.t), T); g.lineTo(x(b.t), H - B); g.stroke(); g.restore();
+    }
+  }
+  if (samples.length === 1) { const s = samples[0], key = s.name || pairs(s.h); legend.set(key, { col: colorFor(key), band: s.band }); }
+  $('legend').innerHTML = [...legend.entries()].map(([k, v]) => `<span><i style="background:${v.col}"></i>${esc(k)} ${bandBadge(v.band, true)}</span>`).join('');
+}
+
+function netsTxt(n) {
+  if (S.lang === 'en') return n + (n === 1 ? ' network' : ' networks');
+  const d = n % 10, dd = n % 100;
+  return n + (n === 1 ? ' sieć' : d >= 2 && d <= 4 && !(dd >= 12 && dd <= 14) ? ' sieci' : ' sieci');
+}
+function renderChannels() {
+  const box = $('channels'); if (!box) return;
+  if (!A) { box.innerHTML = `<div class="dim">${esc(t('browserOnly'))}</div>`; return; }
+  if (!lastScan.length) { box.innerHTML = `<div class="dim">${esc(t('nearEmpty'))}</div>`; return; }
+  const bands = { '24': new Map(), '5': new Map(), '6': new Map() };
+  for (const r of lastScan) {
+    const b = bandOf(r.f); if (!b) continue;
+    const c = chanOf(r.f), m = bands[b];
+    const e = m.get(c) || { n: 0, best: -127 };
+    e.n++; e.best = Math.max(e.best, r.l); m.set(c, e);
+  }
+  const myB = cur && cur.band, myC = cur && chanOf(cur.freq);
+  let html = '';
+  for (const b of ['24', '5', '6']) {
+    const m = bands[b]; if (!m.size) continue;
+    const max = Math.max(...[...m.values()].map(e => e.n));
+    const col = b === '24' ? 'var(--b24)' : b === '5' ? 'var(--b5)' : 'var(--b6)';
+    html += `<div class="chb">${bandBadge(b, true)}</div>` + [...m.entries()].sort((x, y) => x[0] - y[0]).map(([c, e]) => {
+      const me = b === myB && c === myC;
+      return `<div class="chr ${me ? 'me' : ''}"><span class="c">${esc(t('chan'))} ${c}</span><span class="bx"><i style="width:${Math.max(6, e.n / max * 100)}%;background:${col}"></i></span>
+        <span class="v">${esc(netsTxt(e.n))} · ${e.best} dBm${me ? ' · ●' : ''}</span></div>`;
+    }).join('');
+  }
+  box.innerHTML = html + `<div class="dim" style="margin-top:8px">${esc(t('chNote'))}</div>`;
+}
+
+/* =========================================================
+   LISTA + kalkulator
+   ========================================================= */
+function renderTable() {
+  if (!aps.length) { $('tbl').innerHTML = `<div class="dim" style="margin-top:8px">${esc(t('localNote'))}</div>`; return; }
+  const curId = cur ? identify(cur.h, cur.band) : null;
+  $('tbl').innerHTML = `<table><tr><th>${esc(t('colName'))}</th><th>${esc(t('colKey'))}</th></tr>` + aps.map(a =>
+    `<tr class="${curId && curId.entry === a ? 'hit' : ''}"><td>${esc(a.name)}</td><td class="mono">${esc(a.disp)}<br><span class="dim">${esc(a.kind === 'bssid' ? t('kBssid') : t('kMac'))}</span></td></tr>`).join('') +
+    `</table><div class="dim" style="margin-top:8px">${esc(t('localNote'))}</div>`;
+}
+function renderCalc() {
+  const raw = $('calcIn').value.trim(), out = $('calcOut');
+  if (!raw) { out.innerHTML = `<div class="dim">${esc(t('calcEmpty'))}</div>`; return; }
+  const hx = raw.split(/[\s:\-._,;\/|]+/).filter(s => /^[0-9a-f]+$/i.test(s)).join('').toUpperCase();
+  if (hx.length < 6) { out.innerHTML = `<div class="warn">${esc(t('calcShort'))}</div>`; return; }
+  let h = hx.length >= 12 ? hx.slice(-12) : null;
+  // tylko końcówka: dopasuj do listy po ostatnich bajtach
+  if (!h) {
+    const tail = hx.slice(-6);
+    const pre = aps.find(a => a.kind === 'mac') ? aps.find(a => a.kind === 'mac').hex.slice(0, 6) : '000000';
+    h = pre + tail;
+  }
+  let html = '';
+  const found = [];
+  for (const b of ['24', '5']) {
+    const id = identify(h, b);
+    if (id.name && !found.some(f => f.name === id.name)) found.push({ name: id.name, band: b, mac: id.mac });
+  }
+  if (found.length) html += found.map(f => `<div class="name">${esc(f.name)}</div>` + (S.mode === 'aruba' && f.mac ? `<div class="dim">${esc(t('arubaMac'))}: <b class="mono">${esc(f.mac)}</b> · ${bandBadge(f.band, true)}</div>` : '')).join('');
+  else html += `<div class="dim">${esc(t('calcNoMatch'))}</div>`;
+  if (hx.length >= 12) html += `<div class="dim" style="margin-top:6px">${esc(t('vendor'))}: ${esc(vendorOf(h))}</div>`;
+  if (S.mode === 'aruba' && !found.length) {
+    html += `<div class="dim" style="margin-top:8px">${esc(t('calcIf24'))}</div><div class="mono" style="font:700 20px ui-monospace">${esc(arubaMacTxt(h, '24'))}</div>
+             <div class="dim">${esc(t('calcIf5'))}</div><div class="mono" style="font:700 20px ui-monospace">${esc(arubaMacTxt(h, '5'))}</div>`;
+  }
+  out.innerHTML = html;
+}
+
+/* eksport / import */
+function listTxt() { return aps.map(a => a.name + '  ' + a.disp).join('\r\n') + '\r\n'; }
+function msg(html) { $('listMsg').innerHTML = html; }
+function importTxt(text) {
+  if (text === null || text === undefined) { msg(`<span class="warn">${esc(t('importErr'))}</span>`); return; }
+  const have = new Set(aps.map(entryKey));
+  const incoming = parseList(String(text));
+  if (!incoming.length) { msg(`<span class="warn">${esc(t('importNone'))}</span>`); return; }
+  const add = []; let skipped = 0;
+  for (const a of incoming) {
+    const k = entryKey(a);
+    if (have.has(k)) { skipped++; continue; }
+    have.add(k); add.push(a.name + '  ' + a.disp);
+  }
+  if (add.length) { appendLines(add); renderAll(); }
+  msg(`<span class="ok">${esc(add.length === 1 ? t('added1') : t('added', { n: add.length }))}</span>` + (skipped ? esc(t('skipped', { n: skipped })) : '') + '.');
+}
+
+/* =========================================================
+   Start
+   ========================================================= */
+document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.querySelectorAll('#modeSeg button').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.v; saveSettings(); applyI18n(); }));
+document.querySelectorAll('#langSeg button').forEach(b => b.addEventListener('click', () => { S.lang = b.dataset.v; saveSettings(); applyI18n(); }));
+['Sound', 'Vib', 'Screen', 'Bg', 'Sticky'].forEach(k => {
+  const el = $('opt' + k), key = k.toLowerCase();
+  el.checked = !!S[key];
+  el.addEventListener('change', () => {
+    S[key] = el.checked; saveSettings();
+    if (key === 'screen' && A) A.keepScreenOn(S.screen);
+    if (key === 'bg' && A && A.setMonitoring) A.setMonitoring(S.bg);
+    if (key === 'sticky') renderLive();
+  });
+});
+$('testSound').addEventListener('click', () => { if (A) A.roamAlert(true, !!S.vib); });
+$('scanBtn').addEventListener('click', () => maybeScan(true));
+$('calcIn').addEventListener('input', renderCalc);
+$('list').addEventListener('input', () => { storeList(); renderCalc(); renderLive(); });
+$('nmSave').addEventListener('click', saveName);
+$('nmCancel').addEventListener('click', closeName);
+$('nameModal').addEventListener('click', e => { if (e.target.id === 'nameModal') closeName(); });
+$('nmName').addEventListener('keydown', e => { if (e.key === 'Enter') saveName(); });
+let clearArmed = 0;
+$('clearList').addEventListener('click', () => {
+  if (Date.now() - clearArmed > 4000) { clearArmed = Date.now(); $('clearList').textContent = t('clearSure'); setTimeout(() => $('clearList').textContent = t('clear'), 4000); return; }
+  $('list').value = ''; storeList(); renderAll(); clearArmed = 0; $('clearList').textContent = t('clear');
+});
+$('expTxt').addEventListener('click', () => {
+  if (!aps.length) { msg(esc(t('listEmpty'))); return; }
+  const d = new Date(), z = n => String(n).padStart(2, '0');
+  const f = `AP_list_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}.txt`;
+  const r = A.saveTxt(f, listTxt());
+  msg(r === 'OK' ? `<span class="ok">${esc(t('saved', { f, n: aps.length }))}</span>` : r === 'OLD' ? `<span class="warn">${esc(t('oldAndroid'))}</span>` : `<span class="warn">${esc(t('saveErr', { e: r }))}</span>`);
+});
+$('expShare').addEventListener('click', () => { if (!aps.length) { msg(esc(t('listEmpty'))); return; } A.shareTxt(listTxt()); });
+$('impTxt').addEventListener('click', () => { msg(''); A.pickTxt(); });
+
+window.onPermissionChanged = () => { readStatus(); tick(); };
+window.onAppResume = () => {
+  readStatus(); tick(); if (S.screen && A) A.keepScreenOn(true);
+  if (A && A.isMonitoring) { const on = !!A.isMonitoring(); if (on !== S.bg) { S.bg = on; $('optBg').checked = on; lsSet('apidSettings', JSON.stringify(S)); } }
+};
+
+loadList();
+applyI18n();
+showTab(tab);
+if (A) {
+  readStatus(); readScan(); syncNative(); tick();
+  if (S.screen) A.keepScreenOn(true);
+  if (S.bg && A.setMonitoring) A.setMonitoring(true);
+  setInterval(tick, 1000);
+  setInterval(readStatus, 5000);
+  setInterval(() => { if (tab === 'near' || (S.sticky && tab === 'live')) maybeScan(false); else readScan(); if (tab === 'chart') renderChannels(); }, 5000);
+}
+</script>
+</body>
+</html>

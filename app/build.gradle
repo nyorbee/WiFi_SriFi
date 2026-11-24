@@ -1,0 +1,36 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'pl.nyorbee.bssid'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'pl.nyorbee.bssid'
+        minSdk 24
+        targetSdk 36
+        versionCode 25
+        versionName '2.5'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // nie kompresuj dźwięku i strony (szybsze ładowanie)
+    androidResources {
+        noCompress 'wav'
+    }
+}
